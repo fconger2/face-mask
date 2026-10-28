@@ -1,0 +1,255 @@
+<title>Four Downs</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Graduate&family=Barlow+Condensed:wght@500;600;700&display=swap">
+<style>
+/* Layout: one narrow playbook column on a chalkboard field — title, puzzle tabs, down marker, 4x4 board, controls */
+:root{
+  --field:#14221c; --field-2:#1b2d25; --chalk:#eef2ea; --dim:#9db1a6; --rule:rgba(238,242,234,.09);
+  --tile:#ebe5d3; --tile-ink:#16211c; --sel:#00338d; --sel-ink:#ffffff;
+  --g1:#f2c14e; --g2:#7cc47f; --g3:#79a6f2; --g4:#d33a4a; --ink-on-g:#14211b; --ink-on-g4:#ffffff;
+  --display:'Graduate', 'Rockwell', Georgia, serif;
+  --body:'Barlow Condensed', 'Arial Narrow', 'Roboto Condensed', system-ui, sans-serif;
+  color-scheme:dark;
+}
+html,body{min-height:100%}
+body{
+  margin:0; background:var(--field); color:var(--chalk); font-family:var(--body); font-size:17px;
+  background-image:repeating-linear-gradient(180deg, transparent 0 63px, var(--rule) 63px 65px);
+}
+.wrap{max-width:560px; margin:0 auto; padding-block:28px 48px;
+  padding-left:max(16px, env(safe-area-inset-left, 0px)); padding-right:max(16px, env(safe-area-inset-right, 0px));
+  display:flex; flex-direction:column; gap:18px}
+header{display:flex; flex-direction:column; gap:4px}
+h1{font-family:var(--display); font-weight:400; font-size:clamp(2.1rem, 8vw, 3rem); margin:0; letter-spacing:.02em; line-height:1; text-wrap:balance}
+h1 span{color:var(--g1)}
+.sub{color:var(--dim); margin:0; font-size:1.05rem}
+.tabs{display:flex; flex-wrap:wrap; gap:8px}
+.tab{font:600 .95rem var(--body); letter-spacing:.06em; text-transform:uppercase; color:var(--dim);
+  background:transparent; border:1.5px solid var(--rule); border-color:rgba(238,242,234,.22); border-radius:999px; padding:6px 14px; cursor:pointer}
+.tab[aria-pressed="true"]{color:var(--tile-ink); background:var(--chalk); border-color:var(--chalk)}
+.tab .chk{margin-left:6px; color:var(--g2)}
+.tab[aria-pressed="true"] .chk{color:#2f7d34}
+.status{display:flex; justify-content:space-between; align-items:end; gap:12px; flex-wrap:wrap}
+.down-label{font-family:var(--display); font-size:1.35rem; letter-spacing:.03em}
+.down-label small{display:block; font-family:var(--body); font-size:.8rem; letter-spacing:.14em; color:var(--dim); text-transform:uppercase}
+.chain{display:flex; gap:6px; align-items:center}
+.chain i{width:30px; height:30px; border-radius:6px; border:2px solid var(--chalk); display:grid; place-items:center;
+  font:700 .9rem var(--body); font-style:normal; color:var(--chalk)}
+.chain i.used{background:var(--g4); border-color:var(--g4); color:var(--ink-on-g4); text-decoration:line-through}
+.chain i.now{background:var(--g1); border-color:var(--g1); color:var(--ink-on-g)}
+.board{display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); gap:8px}
+.solved{grid-column:1/-1; border-radius:10px; padding:12px 10px; text-align:center; color:var(--ink-on-g);
+  animation:pop .35s ease-out}
+.solved.c4{color:var(--ink-on-g4)}
+.solved b{display:block; font:700 1.05rem var(--body); letter-spacing:.08em; text-transform:uppercase}
+.solved span{font-size:1rem; font-weight:500}
+.solved .lvl{display:block; font-size:.72rem; letter-spacing:.16em; text-transform:uppercase; opacity:.75; margin-bottom:2px}
+.c1{background:var(--g1)} .c2{background:var(--g2)} .c3{background:var(--g3)} .c4{background:var(--g4)}
+.tile{aspect-ratio:1/0.78; max-width:100%; min-width:0; border:0; border-radius:10px; background:var(--tile); color:var(--tile-ink);
+  font:700 clamp(.82rem, 3.4vw, 1.12rem)/1.05 var(--body); letter-spacing:.03em; text-transform:uppercase;
+  padding:6px 4px; cursor:pointer; overflow-wrap:anywhere; transition:transform .12s, background .12s}
+.tile:hover{transform:translateY(-2px)}
+.tile[aria-pressed="true"]{background:var(--sel); color:var(--sel-ink)}
+.tile:focus-visible,.btn:focus-visible,.tab:focus-visible{outline:3px solid var(--g1); outline-offset:2px}
+.board.shake{animation:shake .4s}
+.controls{display:flex; gap:10px; justify-content:center; flex-wrap:wrap}
+.btn{font:700 1rem var(--body); letter-spacing:.1em; text-transform:uppercase; padding:11px 20px; border-radius:999px;
+  border:2px solid var(--chalk); background:transparent; color:var(--chalk); cursor:pointer}
+.btn.primary{background:var(--chalk); color:var(--tile-ink)}
+.btn:disabled{opacity:.35; cursor:default}
+.toast{min-height:1.6em; text-align:center; font-weight:600; font-size:1.1rem; letter-spacing:.04em; color:var(--g1)}
+.result{border:1.5px dashed rgba(238,242,234,.3); border-radius:12px; padding:16px; display:flex; flex-direction:column; gap:10px; align-items:center; text-align:center}
+.result h2{font-family:var(--display); font-weight:400; margin:0; font-size:1.7rem}
+.result pre{margin:0; font-size:1.25rem; line-height:1.25; font-family:inherit}
+.how{color:var(--dim); font-size:1rem; line-height:1.4; max-width:60ch}
+.how b{color:var(--chalk)}
+@keyframes shake{0%,100%{transform:none}20%{transform:translateX(-6px)}40%{transform:translateX(6px)}60%{transform:translateX(-4px)}80%{transform:translateX(4px)}}
+@keyframes pop{from{transform:scale(.96); opacity:.6}to{transform:none; opacity:1}}
+@media (prefers-reduced-motion: reduce){*{animation:none!important; transition:none!important}}
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Four <span>Downs</span></h1>
+    <p class="sub">Sort 16 NFL words into four groups of four. Four wrong guesses and it's a turnover on downs.</p>
+  </header>
+
+  <nav class="tabs" id="tabs" aria-label="Puzzles"></nav>
+
+  <div class="status">
+    <div class="down-label" id="downLabel"><small>Down</small>1st &amp; 4</div>
+    <div class="chain" id="chain" aria-label="Downs remaining"></div>
+  </div>
+
+  <div class="board" id="board"></div>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <div class="controls" id="controls">
+    <button class="btn" id="shuffle" type="button">Shuffle</button>
+    <button class="btn" id="clear" type="button">Deselect</button>
+    <button class="btn primary" id="submit" type="button" disabled>Snap it</button>
+  </div>
+
+  <div class="result" id="result" hidden>
+    <h2 id="resultTitle">Touchdown!</h2>
+    <pre id="grid"></pre>
+    <div class="controls">
+      <button class="btn" id="copy" type="button">Copy result</button>
+      <button class="btn" id="reset" type="button">Replay</button>
+      <button class="btn primary" id="next" type="button">Next puzzle</button>
+    </div>
+  </div>
+
+  <p class="how"><b>Difficulty runs from Run Play to Hail Mary.</b> Gold groups are the gimmes, red ones are the trick plays. Watch for words that fit two groups.</p>
+</div>
+
+<script>
+const LEVELS = ['Run Play','Play Action','Trick Play','Hail Mary'];
+const PUZZLES = [
+  { name:'Name Game', groups:[
+    {title:'Big cats', words:['LIONS','BENGALS','JAGUARS','PANTHERS']},
+    {title:'Named after workers', words:['PACKERS','STEELERS','COWBOYS','49ERS']},
+    {title:'Birds of prey (and a raven)', words:['FALCONS','EAGLES','RAVENS','SEAHAWKS']},
+    {title:'Moved cities, kept the name', words:['RAMS','RAIDERS','CARDINALS','COLTS']},
+  ]},
+  { name:'Chalk Talk', groups:[
+    {title:'Ways to score', words:['TOUCHDOWN','FIELD GOAL','SAFETY','TWO-POINT']},
+    {title:'Penalties', words:['HOLDING','CLIPPING','OFFSIDE','FACE MASK']},
+    {title:'Passing routes', words:['SLANT','POST','WHEEL','CORNER']},
+    {title:'Never played in a Super Bowl', words:['BROWNS','LIONS ','TEXANS','JAGUARS ']},
+  ]},
+  { name:'Two-Minute Drill', groups:[
+    {title:'Defensive takeaways and pressure', words:['BLITZ','SACK','PICK','STRIP']},
+    {title:'___ kick', words:['ONSIDE','FREE','SQUIB','DROP']},
+    {title:'Heard at the line', words:['OMAHA','HUT','SET','KILL']},
+    {title:'Famous named plays', words:['HAIL MARY','PHILLY SPECIAL','BUTT FUMBLE','HELMET CATCH']},
+  ]},
+  { name:'Prime Time', groups:[
+    {title:'NFC North teams', words:['BEARS','LIONS','PACKERS','VIKINGS']},
+    {title:'___ Bowl', words:['SUPER','PRO','PUPPY','ROSE']},
+    {title:'Draft day lingo', words:['BOARD','ROUND','TRADE UP','MR. IRRELEVANT']},
+    {title:'Famous TD celebrations', words:['LAMBEAU LEAP','ICKEY SHUFFLE','GRIDDY','DIRTY BIRD']},
+  ]},
+];
+// Trailing spaces above keep duplicate words unique as keys; strip for display.
+const show = w => w.trim();
+
+const KEY = 'four-downs-v2';
+let store = {};
+try { store = JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch(e) { store = {}; }
+const save = () => { try { localStorage.setItem(KEY, JSON.stringify(store)); } catch(e) {} };
+
+let cur = 0, selected = new Set();
+const $ = id => document.getElementById(id);
+
+function shuffle(a){ a = a.slice(); for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]];} return a; }
+function fresh(p){ return { solved:[], mistakes:0, guesses:[], order:shuffle(PUZZLES[p].groups.flatMap(g=>g.words)), over:false, won:false }; }
+function st(){ if(!store[cur]) store[cur] = fresh(cur); return store[cur]; }
+function groupOf(word){ return PUZZLES[cur].groups.findIndex(g=>g.words.includes(word)); }
+
+function toast(msg){ const t=$('toast'); t.textContent=msg; clearTimeout(toast._t); toast._t=setTimeout(()=>t.textContent='', 2200); }
+
+function renderTabs(){
+  $('tabs').innerHTML = '';
+  PUZZLES.forEach((p,i)=>{
+    const b=document.createElement('button'); b.className='tab'; b.type='button';
+    b.setAttribute('aria-pressed', i===cur);
+    b.textContent = p.name;
+    if(store[i]?.won){ const c=document.createElement('span'); c.className='chk'; c.textContent='✓'; b.append(c); }
+    b.onclick=()=>{ cur=i; selected.clear(); render(); };
+    $('tabs').append(b);
+  });
+}
+
+function render(){
+  const s=st(), P=PUZZLES[cur];
+  renderTabs();
+  const ords=['1st','2nd','3rd','4th'];
+  const down=Math.min(s.mistakes,3);
+  $('downLabel').innerHTML = s.over
+    ? `<small>Final</small>${s.won ? 'Touchdown' : 'Turnover on downs'}`
+    : `<small>Down</small>${ords[down]} &amp; ${4-s.solved.length}`;
+  $('chain').innerHTML = [1,2,3,4].map(n=>{
+    const cls = n<=s.mistakes ? 'used' : (n===s.mistakes+1 && !s.over ? 'now' : '');
+    return `<i class="${cls}">${n}</i>`;
+  }).join('');
+
+  const board=$('board'); board.innerHTML='';
+  s.solved.forEach(gi=>{
+    const g=P.groups[gi], d=document.createElement('div');
+    d.className=`solved c${gi+1}`;
+    d.innerHTML=`<span class="lvl">${LEVELS[gi]}</span><b>${g.title}</b><span>${g.words.map(show).join(', ')}</span>`;
+    board.append(d);
+  });
+  s.order.filter(w=>!s.solved.includes(groupOf(w))).forEach(w=>{
+    const b=document.createElement('button'); b.className='tile'; b.type='button';
+    b.textContent=show(w); b.setAttribute('aria-pressed', selected.has(w));
+    b.disabled=s.over;
+    b.onclick=()=>{
+      if(selected.has(w)) selected.delete(w);
+      else if(selected.size<4) selected.add(w);
+      render();
+    };
+    board.append(b);
+  });
+
+  $('controls').hidden=s.over;
+  $('submit').disabled=selected.size!==4;
+  $('clear').disabled=selected.size===0;
+  $('result').hidden=!s.over;
+  if(s.over){
+    $('resultTitle').textContent = s.won ? (s.mistakes===0 ? 'Perfect drive!' : 'Touchdown!') : 'Turnover on downs';
+    $('grid').textContent = gridText();
+    $('next').hidden = cur===PUZZLES.length-1;
+  }
+}
+
+const SQ=['🟨','🟩','🟦','🟥'];
+function gridText(){ return st().guesses.map(gs=>gs.map(w=>SQ[groupOf(w)]).join('')).join('\n'); }
+
+function submit(){
+  const s=st(), pick=[...selected];
+  const key=pick.slice().sort().join('|');
+  if(s.guesses.some(g=>g.slice().sort().join('|')===key)){ toast('Already ran that play'); return; }
+  s.guesses.push(pick);
+  const counts={}; pick.forEach(w=>{const g=groupOf(w); counts[g]=(counts[g]||0)+1;});
+  const best=Math.max(...Object.values(counts));
+  if(best===4){
+    s.solved.push(groupOf(pick[0])); selected.clear();
+    if(s.solved.length===4){ s.over=true; s.won=true; }
+    else toast(['First down!','Moving the chains','Big gain'][s.solved.length-1]);
+  } else {
+    s.mistakes++;
+    const b=$('board'); b.classList.remove('shake'); void b.offsetWidth; b.classList.add('shake');
+    if(s.mistakes>=4){
+      s.over=true;
+      [0,1,2,3].forEach(i=>{ if(!s.solved.includes(i)) s.solved.push(i); });
+      selected.clear();
+    } else toast(best===3 ? 'One away…' : 'Incomplete');
+  }
+  save(); render();
+}
+
+$('submit').onclick=submit;
+$('clear').onclick=()=>{ selected.clear(); render(); };
+$('shuffle').onclick=()=>{ const s=st(); s.order=shuffle(s.order); save(); render(); };
+$('reset').onclick=()=>{ store[cur]=fresh(cur); selected.clear(); save(); render(); };
+$('next').onclick=()=>{ cur=Math.min(cur+1, PUZZLES.length-1); selected.clear(); render(); };
+$('copy').onclick=()=>{
+  const s=st();
+  const text=`Four Downs · ${PUZZLES[cur].name}\n${s.won?'TD':'Turnover'} · ${s.mistakes}/4 downs used\n${gridText()}`;
+  const done=()=>toast('Copied');
+  if(navigator.clipboard?.writeText){
+    navigator.clipboard.writeText(text).then(done).catch(()=>selectGrid());
+  } else selectGrid();
+};
+function selectGrid(){ const r=document.createRange(); r.selectNodeContents($('grid')); const sel=getSelection(); sel.removeAllRanges(); sel.addRange(r); toast('Press copy to grab it'); }
+
+function start(data){
+  if(data && data.store){ store=data.store; cur=data.cur||0; }
+  render();
+}
+window.claude?.hot?.snapshot?.(()=>({store, cur}));
+window.claude?.hot?.ready ? window.claude.hot.ready(start) : start(window.claude?.hot?.data ?? {});
+</script>

@@ -1,0 +1,543 @@
+<title>Face Mask</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;900&family=Saira+Condensed:wght@500;600;700&display=swap">
+<style>
+/* Layout: stadium-scoreboard column — title, game tabs, one game panel at a time */
+:root{
+  --night:#0d1526; --panel:#152038; --panel-2:#1c2a48; --line:#2a3a5e; --ink:#eef3ff; --dim:#93a3c4;
+  --hit:#2fa865; --near:#e3b23c; --miss:#33415f; --bad:#d4434f; --hit-ink:#ffffff; --near-ink:#1c1405;
+  --display:'Big Shoulders Display', Impact, 'Arial Narrow', sans-serif;
+  --body:'Saira Condensed', 'Arial Narrow', 'Roboto Condensed', system-ui, sans-serif;
+  color-scheme:dark;
+}
+body{margin:0; background:var(--night); color:var(--ink); font-family:var(--body); font-size:17px;
+  background-image:radial-gradient(ellipse 80% 40% at 50% 0%, #1d2d55 0%, transparent 70%)}
+.wrap{max-width:720px; margin:0 auto; padding-block:26px 48px;
+  padding-left:max(16px, env(safe-area-inset-left, 0px)); padding-right:max(16px, env(safe-area-inset-right, 0px));
+  display:flex; flex-direction:column; gap:16px}
+h1{font-family:var(--display); font-weight:900; font-size:clamp(2.4rem, 10vw, 3.6rem); line-height:.9; margin:0; letter-spacing:.01em; text-transform:uppercase}
+h1 em{font-style:normal; color:var(--near)}
+h2{font-family:var(--display); font-weight:900; text-transform:uppercase; font-size:1.7rem; margin:0; line-height:1}
+.sub{margin:4px 0 0; color:var(--dim); font-size:1.05rem}
+.tabs{display:flex; gap:6px; overflow-x:auto; padding-bottom:4px; border-bottom:1px solid var(--line)}
+.tab{flex:none; font:700 .95rem var(--body); text-transform:uppercase; letter-spacing:.07em; padding:8px 12px; border:0; border-bottom:3px solid transparent;
+  background:transparent; color:var(--dim); cursor:pointer}
+.tab[aria-selected="true"]{color:var(--ink); border-bottom-color:var(--near)}
+[hidden]{display:none!important}
+section{display:flex; flex-direction:column; gap:14px}
+.bar{display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap}
+.chips{display:flex; gap:6px; flex-wrap:wrap}
+.mode{font:600 .9rem var(--body); text-transform:uppercase; letter-spacing:.08em; padding:6px 12px; border-radius:6px;
+  border:1.5px solid var(--line); background:transparent; color:var(--dim); cursor:pointer}
+.mode[aria-pressed="true"]{background:var(--ink); color:var(--night); border-color:var(--ink)}
+.guessbar{position:relative; display:flex; gap:8px}
+.guessbar input{flex:1; min-width:0; font:600 1.15rem var(--body); padding:12px 14px; border-radius:8px; border:2px solid var(--line);
+  background:var(--panel); color:var(--ink)}
+.guessbar input:focus{outline:none; border-color:var(--near)}
+.guessbar input:disabled{opacity:.5}
+.count{align-self:center; font:700 1.1rem var(--body); color:var(--dim); white-space:nowrap; font-variant-numeric:tabular-nums}
+.sugg{position:absolute; left:0; right:0; top:calc(100% + 4px); z-index:5; list-style:none; margin:0; padding:4px;
+  background:var(--panel-2); border:1px solid var(--line); border-radius:8px; max-height:300px; overflow:auto}
+.sugg li{padding:8px 10px; border-radius:6px; cursor:pointer; display:flex; justify-content:space-between; gap:10px}
+.sugg li[aria-selected="true"], .sugg li:hover{background:var(--line)}
+.sugg small{color:var(--dim); font-weight:600}
+.legend{display:flex; gap:14px; flex-wrap:wrap; color:var(--dim); font-size:.95rem}
+.legend span{display:inline-flex; align-items:center; gap:6px}
+.legend i{width:14px; height:14px; border-radius:3px; display:inline-block}
+.scroll{overflow-x:auto}
+.board{display:grid; grid-template-columns:minmax(120px,1.6fr) repeat(7, minmax(52px,1fr)); gap:5px; min-width:560px}
+.hd{font:700 .78rem var(--body); letter-spacing:.14em; text-transform:uppercase; color:var(--dim); text-align:center; padding-bottom:2px}
+.hd:first-child{text-align:left}
+.name{display:flex; align-items:center; font-weight:700; font-size:1.02rem; line-height:1.1; padding:6px 4px; overflow-wrap:anywhere}
+.cell{min-height:52px; border-radius:6px; display:flex; flex-direction:column; align-items:center; justify-content:center;
+  font:700 1.08rem var(--body); background:var(--miss); color:var(--ink); font-variant-numeric:tabular-nums; animation:flip .45s both}
+.cell small{font-size:.75rem; font-weight:600; line-height:1}
+.hit{background:var(--hit); color:var(--hit-ink)}
+.near{background:var(--near); color:var(--near-ink)}
+.empty{min-height:52px; border-radius:6px; border:1.5px dashed var(--line)}
+.banner{border-radius:12px; padding:16px; background:var(--panel); border:1px solid var(--line); display:flex; flex-direction:column; gap:10px; align-items:center; text-align:center}
+.banner p{margin:0; color:var(--dim); font-size:1.1rem}
+.banner b{color:var(--ink)}
+.banner pre{margin:0; font-family:inherit; font-size:1.1rem; line-height:1.2}
+.row{display:flex; gap:8px; flex-wrap:wrap; justify-content:center}
+.btn{font:700 1rem var(--body); text-transform:uppercase; letter-spacing:.08em; padding:10px 18px; border-radius:8px;
+  border:2px solid var(--ink); background:transparent; color:var(--ink); cursor:pointer}
+.btn.primary{background:var(--near); border-color:var(--near); color:var(--near-ink)}
+.btn:disabled{opacity:.35; cursor:default}
+.btn:focus-visible,.mode:focus-visible,.tab:focus-visible,.gcell:focus-visible,select:focus-visible{outline:3px solid var(--near); outline-offset:2px}
+.toast{min-height:1.4em; text-align:center; color:var(--near); font-weight:600}
+.note{color:var(--dim); font-size:.92rem; line-height:1.4; margin:0}
+
+/* Higher or Lower */
+.hl{display:grid; grid-template-columns:1fr auto 1fr; gap:10px; align-items:stretch}
+.hlcard{background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:16px 12px; display:flex; flex-direction:column; gap:6px; align-items:center; text-align:center; min-width:0}
+.hlcard .nm{font-weight:700; font-size:1.25rem; line-height:1.1}
+.hlcard .meta{color:var(--dim); font-size:.95rem}
+.hlcard .val{font-family:var(--display); font-weight:900; font-size:clamp(2.2rem,9vw,3.2rem); line-height:1; font-variant-numeric:tabular-nums}
+.hlcard.right .val{color:var(--near)}
+.hlcard.ok{border-color:var(--hit); box-shadow:0 0 0 2px var(--hit) inset}
+.hlcard.no{border-color:var(--bad); box-shadow:0 0 0 2px var(--bad) inset}
+.vs{align-self:center; font-family:var(--display); font-weight:900; color:var(--dim); font-size:1.3rem}
+.stat-q{text-align:center; font-size:1.2rem}
+.stat-q b{color:var(--near); text-transform:uppercase; letter-spacing:.05em}
+.streak{font:700 1.1rem var(--body); font-variant-numeric:tabular-nums}
+.streak span{color:var(--dim); font-weight:600}
+@media (max-width:480px){ .hl{grid-template-columns:1fr} .vs{justify-self:center} }
+
+/* Grid */
+.grid{display:grid; grid-template-columns:minmax(64px,.8fr) repeat(3, minmax(0,1fr)); gap:6px}
+.ghd{display:flex; align-items:center; justify-content:center; text-align:center; font:700 1rem var(--body); line-height:1.05;
+  background:var(--panel-2); border-radius:8px; padding:8px 4px; min-height:48px; overflow-wrap:anywhere}
+.ghd.corner{background:transparent; flex-direction:column; color:var(--dim); font-size:.8rem; letter-spacing:.08em; text-transform:uppercase}
+.ghd.corner b{font-family:var(--display); font-size:2rem; color:var(--ink); line-height:1}
+.gcell{aspect-ratio:1/1; max-width:100%; min-width:0; border-radius:8px; border:1.5px dashed var(--line); background:var(--panel); color:var(--ink);
+  font:700 clamp(.82rem,3.2vw,1.02rem)/1.1 var(--body); padding:4px; cursor:pointer; overflow-wrap:anywhere; display:flex; align-items:center; justify-content:center; text-align:center}
+.gcell.active{border:2px solid var(--near)}
+.gcell.filled{background:var(--hit); border:0; color:var(--hit-ink); cursor:default; flex-direction:column}
+.gcell.filled small{font-weight:600; opacity:.8; font-size:.75em}
+.gcell.reveal{color:var(--dim); font-weight:600; cursor:default}
+
+/* Draft */
+.picks{display:flex; flex-direction:column; gap:6px}
+.pick{display:grid; grid-template-columns:58px 52px minmax(0,1fr); gap:8px; align-items:center; background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:6px 8px}
+.pick .no{font-family:var(--display); font-weight:900; font-size:1.4rem; font-variant-numeric:tabular-nums}
+.pick .tm{font-weight:700; color:var(--dim)}
+.pick select{width:100%; min-width:0; font:600 1rem var(--body); padding:8px; border-radius:6px; background:var(--panel-2); color:var(--ink); border:1px solid var(--line)}
+.pick.hit,.pick.near{border:0}
+.pick.hit .tm,.pick.near .tm{color:inherit}
+.pick .ans{font-weight:600; font-size:.95rem}
+.pick .ans small{display:block; opacity:.8; font-size:.85rem}
+
+/* Blur */
+.bcard{background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:18px; display:grid; grid-template-columns:auto 1fr; gap:6px 18px; align-items:baseline}
+.bcard .big{grid-column:1/-1; display:flex; justify-content:space-between; align-items:baseline; gap:10px; border-bottom:1px solid var(--line); padding-bottom:8px; margin-bottom:4px}
+.bcard .big .pos{font-family:var(--display); font-weight:900; font-size:2.6rem; line-height:1}
+.bcard .big .num{font-family:var(--display); font-weight:900; font-size:2.6rem; color:var(--near); line-height:1}
+.bcard dt{color:var(--dim); font-size:.85rem; text-transform:uppercase; letter-spacing:.12em}
+.bcard dd{margin:0; font-weight:700; font-size:1.1rem; font-variant-numeric:tabular-nums; min-width:0}
+.blurwrap{transition:filter .5s}
+.misses{display:flex; gap:6px; flex-wrap:wrap}
+.misses span{background:var(--miss); padding:4px 10px; border-radius:6px; font-weight:600; text-decoration:line-through; color:var(--dim)}
+.hidden-t{color:var(--dim)}
+@keyframes flip{from{transform:rotateX(90deg)}to{transform:none}}
+@media (prefers-reduced-motion: reduce){.cell{animation:none}.blurwrap{transition:none}}
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Face <em>Mask</em></h1>
+    <p class="sub">Five NFL games built on current QBs, RBs, WRs and TEs.</p>
+  </header>
+
+  <nav class="tabs" role="tablist" aria-label="Games">
+    <button class="tab" role="tab" data-v="guess">Mystery Player</button>
+    <button class="tab" role="tab" data-v="higher">Higher or Lower</button>
+    <button class="tab" role="tab" data-v="grid">Grid</button>
+    <button class="tab" role="tab" data-v="draft">Draft Day</button>
+    <button class="tab" role="tab" data-v="blur">Blurry Box Score</button>
+  </nav>
+
+  <!-- Mystery player -->
+  <section id="v-guess">
+    <div class="bar">
+      <p class="note">Name the mystery skill player in 8 guesses.</p>
+      <div class="chips" role="group" aria-label="Mode">
+        <button class="mode" id="gDaily" type="button">Daily</button>
+        <button class="mode" id="gFree" type="button">Unlimited</button>
+      </div>
+    </div>
+    <div class="guessbar">
+      <input id="gq" type="text" placeholder="Type a player's name…" autocomplete="off" spellcheck="false" aria-label="Guess a player">
+      <span class="count" id="gcount">0/8</span>
+      <ul class="sugg" id="gsugg" role="listbox" hidden></ul>
+    </div>
+    <div class="legend">
+      <span><i style="background:var(--hit)"></i>Exact</span>
+      <span><i style="background:var(--near)"></i>Close: same division, or within 2 (height, age) / 5 (number)</span>
+      <span>↑↓ answer is higher / lower</span>
+    </div>
+    <div class="toast" id="gtoast" role="status" aria-live="polite"></div>
+    <div class="banner" id="gbanner" hidden></div>
+    <div class="scroll"><div class="board" id="gboard"></div></div>
+  </section>
+
+  <!-- Higher or lower -->
+  <section id="v-higher" hidden>
+    <div class="bar">
+      <p class="note">2026 regular-season stats. Does the second player have more or less?</p>
+      <div class="streak">Streak <b id="hStreak">0</b> <span>· Best <b id="hBest">0</b></span></div>
+    </div>
+    <div class="stat-q" id="hQ"></div>
+    <div class="hl">
+      <div class="hlcard" id="hA"></div>
+      <div class="vs">VS</div>
+      <div class="hlcard right" id="hB"></div>
+    </div>
+    <div class="row" id="hBtns">
+      <button class="btn primary" id="hHi" type="button">▲ Higher</button>
+      <button class="btn primary" id="hLo" type="button">▼ Lower</button>
+    </div>
+    <div class="banner" id="hOver" hidden></div>
+  </section>
+
+  <!-- Grid -->
+  <section id="v-grid" hidden>
+    <div class="bar">
+      <p class="note">Tap a square, then name a player who fits both its row and column. Teams count if he was on the roster at any point since 2018.</p>
+      <div class="chips" role="group" aria-label="Grid">
+        <button class="mode" id="xDaily" type="button">Daily</button>
+        <button class="mode" id="xNew" type="button">New grid</button>
+      </div>
+    </div>
+    <div class="grid" id="xgrid"></div>
+    <div class="guessbar" id="xbar">
+      <input id="xq" type="text" placeholder="Tap a square first" autocomplete="off" spellcheck="false" aria-label="Player for the selected square" disabled>
+      <ul class="sugg" id="xsugg" role="listbox" hidden></ul>
+    </div>
+    <div class="toast" id="xtoast" role="status" aria-live="polite"></div>
+    <div class="row"><button class="btn" id="xGive" type="button">Give up</button></div>
+  </section>
+
+  <!-- Draft -->
+  <section id="v-draft" hidden>
+    <div class="bar">
+      <p class="note">Every QB, RB, WR and TE taken in Round 1. Put each player at the pick where he went. 3 points for exact, 1 for one slot off.</p>
+      <div class="chips" role="group" aria-label="Draft year" id="dYears"></div>
+    </div>
+    <div class="picks" id="dPicks"></div>
+    <div class="banner" id="dScore" hidden></div>
+    <div class="row">
+      <button class="btn primary" id="dGo" type="button">Score my draft</button>
+      <button class="btn" id="dReset" type="button">Reset</button>
+    </div>
+  </section>
+
+  <!-- Blur -->
+  <section id="v-blur" hidden>
+    <div class="bar">
+      <p class="note">Whose 2026 stat line is this? It sharpens with every miss. 6 guesses; the team shows after 3 misses.</p>
+      <div class="chips" role="group" aria-label="Mode">
+        <button class="mode" id="bDaily" type="button">Daily</button>
+        <button class="mode" id="bFree" type="button">Unlimited</button>
+      </div>
+    </div>
+    <div class="blurwrap" id="bwrap"><div class="bcard" id="bcard"></div></div>
+    <div class="guessbar">
+      <input id="bq" type="text" placeholder="Who is it?" autocomplete="off" spellcheck="false" aria-label="Guess the player">
+      <span class="count" id="bcount">0/6</span>
+      <ul class="sugg" id="bsugg" role="listbox" hidden></ul>
+    </div>
+    <div class="misses" id="bmiss"></div>
+    <div class="banner" id="bbanner" hidden></div>
+  </section>
+
+  <p class="note">Data: nflverse rosters, stats and draft picks, current through __UPDATED__. Includes only active QBs, RBs, WRs and TEs. Also play <a href="four-downs.html" style="color:var(--near)">Four Downs</a>.</p>
+</div>
+
+<script>
+const DATA = __DATA__;
+const TEAMS = {
+  BUF:['AFC','East'],MIA:['AFC','East'],NE:['AFC','East'],NYJ:['AFC','East'],
+  BAL:['AFC','North'],CIN:['AFC','North'],CLE:['AFC','North'],PIT:['AFC','North'],
+  HOU:['AFC','South'],IND:['AFC','South'],JAX:['AFC','South'],TEN:['AFC','South'],
+  DEN:['AFC','West'],KC:['AFC','West'],LV:['AFC','West'],LAC:['AFC','West'],
+  DAL:['NFC','East'],NYG:['NFC','East'],PHI:['NFC','East'],WAS:['NFC','East'],
+  CHI:['NFC','North'],DET:['NFC','North'],GB:['NFC','North'],MIN:['NFC','North'],
+  ATL:['NFC','South'],CAR:['NFC','South'],NO:['NFC','South'],TB:['NFC','South'],
+  ARI:['NFC','West'],LA:['NFC','West'],SF:['NFC','West'],SEA:['NFC','West'],
+};
+const tn = t => t==='LA'?'LAR':t;
+const norm = s => s.normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase();
+const P = DATA.P.map((p,i)=>({...p, i, key:norm(p.n), conf:TEAMS[p.t][0], div:TEAMS[p.t].join(' ')}));
+const STARS = P.filter(p=>p.s);
+const ft = h => `${Math.floor(h/12)}'${h%12}"`;
+const fmt = n => n.toLocaleString('en-US');
+const $ = id => document.getElementById(id);
+function today(){ const d=new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
+function hash(s){ let h=2166136261; for(const c of s){ h^=c.charCodeAt(0); h=Math.imul(h,16777619); } return h>>>0; }
+function rng(seed){ let a=seed>>>0; return ()=>{ a=(a+0x6D2B79F5)>>>0; let t=a; t=Math.imul(t^t>>>15,t|1); t^=t+Math.imul(t^t>>>7,t|61); return ((t^t>>>14)>>>0)/4294967296; }; }
+const pickOne = (arr,r=Math.random) => arr[Math.floor(r()*arr.length)];
+function shuffled(arr,r=Math.random){ const a=arr.slice(); for(let i=a.length-1;i>0;i--){ const j=Math.floor(r()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
+function toaster(el){ let t; return m=>{ el.textContent=m; clearTimeout(t); t=setTimeout(()=>el.textContent='',2400); }; }
+
+const KEY='face-mask-v3';
+let store={};
+try{ store=JSON.parse(localStorage.getItem(KEY)||'{}')||{}; }catch(e){ store={}; }
+const save=()=>{ try{ localStorage.setItem(KEY, JSON.stringify(store)); }catch(e){} };
+
+function copyText(text, el, toast){
+  const fallback=()=>{ const r=document.createRange(); r.selectNodeContents(el); const s=getSelection(); s.removeAllRanges(); s.addRange(r); toast('Selected. Copy it from here'); };
+  if(navigator.clipboard?.writeText) navigator.clipboard.writeText(text).then(()=>toast('Copied'),fallback); else fallback();
+}
+
+// Shared player search
+function search(input, list, {exclude=()=>new Set(), onPick}){
+  let matches=[], active=0;
+  function show(){
+    const v=norm(input.value).trim();
+    if(v.length<2){ list.hidden=true; matches=[]; return; }
+    const used=exclude();
+    const starts=p=>p.key.startsWith(v)||p.key.split(' ').some(w=>w.startsWith(v));
+    matches=P.filter(p=>!used.has(p.i)&&p.key.includes(v)).sort((a,b)=>starts(b)-starts(a)||b.s-a.s||a.n.localeCompare(b.n)).slice(0,8);
+    active=0;
+    list.innerHTML=matches.map((p,k)=>`<li role="option" data-k="${k}" aria-selected="${k===0}"><span>${p.n}</span><small>${tn(p.t)} · ${p.p}</small></li>`).join('')||'<li><small>No active QB, RB, WR or TE by that name</small></li>';
+    list.hidden=false;
+  }
+  function pick(k){ const p=matches[k]; if(!p) return; input.value=''; list.hidden=true; matches=[]; onPick(p); }
+  input.addEventListener('input',show);
+  input.addEventListener('keydown',e=>{
+    if(list.hidden||!matches.length) return;
+    if(e.key==='ArrowDown'||e.key==='ArrowUp'){ e.preventDefault(); active=(active+(e.key==='ArrowDown'?1:-1)+matches.length)%matches.length;
+      list.querySelectorAll('li').forEach((li,k)=>li.setAttribute('aria-selected',k===active)); }
+    else if(e.key==='Enter'){ e.preventDefault(); pick(active); }
+    else if(e.key==='Escape'){ list.hidden=true; }
+  });
+  list.addEventListener('mousedown',e=>{ const li=e.target.closest('li[data-k]'); if(li){ e.preventDefault(); pick(+li.dataset.k); } });
+  input.addEventListener('blur',()=>setTimeout(()=>list.hidden=true,120));
+}
+
+/* ---------- Mystery player ---------- */
+const G = (()=>{
+  const MAX=8, toast=toaster($('gtoast'));
+  let mode='daily';
+  const daily=()=>{ const s=STARS.slice().sort((a,b)=>hash(a.n+'fm')-hash(b.n+'fm')); return s[Math.floor(Date.parse(today())/864e5)%s.length].i; };
+  const fresh=()=>({answer:pickOne(STARS).i, guesses:[], over:false, won:false});
+  function game(){
+    if(mode==='daily'){ if(!store.g||store.g.date!==today()) store.g={date:today(),answer:daily(),guesses:[],over:false,won:false}; return store.g; }
+    if(!store.gf) store.gf=fresh(); return store.gf;
+  }
+  function cmp(g,a){
+    const num=(x,y,tol)=>({c:x===y?'hit':Math.abs(x-y)<=tol?'near':'', ar:x===y?'':x<y?'↑':'↓'});
+    return { team:{c:g.t===a.t?'hit':g.div===a.div?'near':''}, conf:{c:g.conf===a.conf?'hit':''}, div:{c:g.div===a.div?'hit':''},
+      pos:{c:g.p===a.p?'hit':''}, ht:num(g.h,a.h,2), age:num(g.a,a.a,2), num:num(g.j,a.j,5) };
+  }
+  const grid=()=>{ const g=game(),A=P[g.answer],sq={hit:'🟩',near:'🟨','':'⬛'}; return g.guesses.map(i=>{const c=cmp(P[i],A); return ['team','conf','div','pos','ht','age','num'].map(k=>sq[c[k].c]).join('');}).join('\n'); };
+  function render(){
+    const g=game(), A=P[g.answer];
+    $('gDaily').setAttribute('aria-pressed',mode==='daily'); $('gFree').setAttribute('aria-pressed',mode==='free');
+    $('gcount').textContent=`${g.guesses.length}/${MAX}`; $('gq').disabled=g.over;
+    const b=$('gboard'); b.innerHTML=['Player','Team','Conf','Div','Pos','Ht','Age','#'].map(c=>`<div class="hd">${c}</div>`).join('');
+    g.guesses.slice().reverse().forEach(i=>{
+      const p=P[i], c=cmp(p,A), cell=(r,t,d)=>`<div class="cell ${r.c}" style="animation-delay:${d*70}ms">${t}${r.ar?`<small>${r.ar}</small>`:''}</div>`;
+      b.insertAdjacentHTML('beforeend',`<div class="name">${p.n}</div>`+cell(c.team,tn(p.t),0)+cell(c.conf,p.conf,1)+cell(c.div,TEAMS[p.t][1],2)+cell(c.pos,p.p,3)+cell(c.ht,ft(p.h),4)+cell(c.age,p.a,5)+cell(c.num,p.j,6));
+    });
+    for(let k=g.guesses.length;k<MAX;k++) b.insertAdjacentHTML('beforeend','<div class="name"></div>'+'<div class="empty"></div>'.repeat(7));
+    const ban=$('gbanner'); ban.hidden=!g.over;
+    if(g.over){
+      ban.innerHTML=`<h2>${g.won?(g.guesses.length===1?'First-ballot!':'Got him'):'Sacked'}</h2>
+        <p>${g.won?`You got it in ${g.guesses.length}.`:'The mystery player was'} <b>${A.n}</b> · ${tn(A.t)} ${A.p} · #${A.j} · ${ft(A.h)} · age ${A.a}</p>
+        <pre id="ggrid">${grid()}</pre>
+        <div class="row"><button class="btn" id="gCopy" type="button">Copy result</button><button class="btn primary" id="gNext" type="button">${mode==='daily'?'Play unlimited':'Next player'}</button></div>`;
+      $('gCopy').onclick=()=>copyText(`Face Mask ${mode==='daily'?today():'(unlimited)'} · ${g.won?g.guesses.length:'X'}/${MAX}\n${grid()}`,$('ggrid'),toast);
+      $('gNext').onclick=()=>{ if(mode==='daily'){ mode='free'; if(store.gf?.over) store.gf=fresh(); } else store.gf=fresh(); save(); render(); };
+    }
+  }
+  search($('gq'),$('gsugg'),{exclude:()=>new Set(game().guesses), onPick:p=>{
+    const g=game(); if(g.over) return;
+    g.guesses.push(p.i); if(p.i===g.answer){g.over=true;g.won=true;} else if(g.guesses.length>=MAX) g.over=true;
+    save(); render(); $('gq').focus();
+  }});
+  $('gDaily').onclick=()=>{mode='daily';render();}; $('gFree').onclick=()=>{mode='free';render();};
+  return {render};
+})();
+
+/* ---------- Higher or lower ---------- */
+const H = (()=>{
+  const STATS=[
+    {k:'passing yards',f:s=>s[1],pos:['QB'],min:400},
+    {k:'passing TDs',f:s=>s[2],pos:['QB'],min:3},
+    {k:'rushing yards',f:s=>s[5],pos:['RB','QB'],min:100},
+    {k:'receiving yards',f:s=>s[8],pos:['WR','TE','RB'],min:150},
+    {k:'receptions',f:s=>s[7],pos:['WR','TE','RB'],min:12},
+    {k:'scrimmage TDs',f:s=>s[6]+s[9],pos:['RB','WR','TE'],min:2},
+    {k:'PPR fantasy points',f:s=>s[10],pos:['QB','RB','WR','TE'],min:50},
+  ];
+  let round=null, streak=0, locked=false;
+  function newRound(){
+    for(let t=0;t<200;t++){
+      const S=pickOne(STATS), pool=P.filter(p=>p.st&&S.pos.includes(p.p)&&S.f(p.st)>=S.min);
+      const a=pickOne(pool), b=pickOne(pool);
+      if(a&&b&&a.i!==b.i&&S.f(a.st)!==S.f(b.st)) return {S,a,b};
+    }
+  }
+  const card=(p,val)=>`<div class="nm">${p.n}</div><div class="meta">${tn(p.t)} · ${p.p}</div><div class="val">${val}</div>`;
+  function render(reveal){
+    const {S,a,b}=round;
+    $('hQ').innerHTML=`2026 <b>${S.k}</b>`;
+    $('hA').innerHTML=card(a,fmt(S.f(a.st)));
+    $('hB').innerHTML=card(b,reveal?fmt(S.f(b.st)):'?');
+    $('hStreak').textContent=streak; $('hBest').textContent=store.hBest||0;
+  }
+  function answer(hi){
+    if(locked) return; locked=true;
+    const {S,a,b}=round, ok=hi?S.f(b.st)>S.f(a.st):S.f(b.st)<S.f(a.st);
+    render(true); $('hB').classList.add(ok?'ok':'no');
+    if(ok){ streak++; if(streak>(store.hBest||0)){ store.hBest=streak; save(); } $('hStreak').textContent=streak; $('hBest').textContent=store.hBest;
+      setTimeout(()=>{ round=newRound(); locked=false; $('hB').className='hlcard right'; render(false); },1100);
+    } else {
+      $('hBtns').hidden=true; const o=$('hOver'); o.hidden=false;
+      o.innerHTML=`<h2>Incomplete</h2><p>${b.n} has <b>${fmt(S.f(b.st))}</b> ${S.k}. Your streak: <b>${streak}</b>.</p><div class="row"><button class="btn primary" id="hAgain" type="button">Play again</button></div>`;
+      $('hAgain').onclick=start;
+    }
+  }
+  function start(){ streak=0; locked=false; round=newRound(); $('hOver').hidden=true; $('hBtns').hidden=false; $('hB').className='hlcard right'; render(false); }
+  $('hHi').onclick=()=>answer(true); $('hLo').onclick=()=>answer(false);
+  return {render:()=>{ if(!round) start(); }};
+})();
+
+/* ---------- Grid ---------- */
+const X = (()=>{
+  const toast=toaster($('xtoast'));
+  const crit=[];
+  Object.keys(TEAMS).forEach(t=>crit.push({id:'t:'+t,label:tn(t),type:'team',test:p=>p.T.includes(t)}));
+  ['QB','RB','WR','TE'].forEach(pos=>crit.push({id:'p:'+pos,label:pos,type:'pos',test:p=>p.p===pos}));
+  const cc={}; P.forEach(p=>{ if(p.c) cc[p.c]=(cc[p.c]||0)+1; });
+  Object.keys(cc).filter(c=>cc[c]>=9).forEach(c=>crit.push({id:'c:'+c,label:c,type:'college',test:p=>p.c===c}));
+  crit.push({id:'r1',label:'1st-round pick',type:'r1',test:p=>p.d&&p.d[1]===1});
+  const byId=Object.fromEntries(crit.map(c=>[c.id,c]));
+  const teams=crit.filter(c=>c.type==='team'), extras=crit.filter(c=>c.type!=='team');
+  const answers=(r,c)=>P.filter(p=>byId[r].test(p)&&byId[c].test(p));
+  function gen(r){
+    for(let t=0;t<4000;t++){
+      const ts=shuffled(teams,r).slice(0,5), ex=pickOne(extras,r);
+      const rows=ts.slice(0,3).map(c=>c.id), cols=shuffled([ts[3].id,ts[4].id,ex.id],r);
+      if(rows.every(a=>cols.every(b=>answers(a,b).length>=2))) return {rows,cols,cells:Array(9).fill(null),left:9,over:false};
+    }
+  }
+  let mode='daily', active=null;
+  function game(){
+    if(mode==='daily'){ if(!store.x||store.x.date!==today()) store.x={...gen(rng(hash('grid'+today()))),date:today()}; return store.x; }
+    if(!store.xf) store.xf=gen(Math.random); return store.xf;
+  }
+  function render(){
+    const g=game(); const el=$('xgrid');
+    $('xDaily').setAttribute('aria-pressed',mode==='daily'); $('xNew').setAttribute('aria-pressed',mode==='free');
+    const filled=g.cells.filter(Boolean).length;
+    el.innerHTML=`<div class="ghd corner">${g.over?'Score':'Guesses'}<b>${g.over?filled+'/9':g.left}</b></div>`+g.cols.map(c=>`<div class="ghd">${byId[c].label}</div>`).join('');
+    g.rows.forEach((r,ri)=>{
+      el.insertAdjacentHTML('beforeend',`<div class="ghd">${byId[r].label}</div>`);
+      g.cols.forEach((c,ci)=>{
+        const k=ri*3+ci, v=g.cells[k];
+        if(v!=null){ el.insertAdjacentHTML('beforeend',`<div class="gcell filled">${P[v].n}<small>${tn(P[v].t)} · ${P[v].p}</small></div>`); return; }
+        if(g.over){ const a=answers(r,c).sort((x,y)=>y.s-x.s)[0]; el.insertAdjacentHTML('beforeend',`<div class="gcell reveal">${a?a.n:'—'}</div>`); return; }
+        el.insertAdjacentHTML('beforeend',`<button type="button" class="gcell${active===k?' active':''}" data-k="${k}" aria-label="${byId[r].label} and ${byId[c].label}">${active===k?'Pick…':''}</button>`);
+      });
+    });
+    el.querySelectorAll('button.gcell').forEach(b=>b.onclick=()=>{ active=+b.dataset.k; render(); $('xq').focus(); });
+    const q=$('xq'); q.disabled=g.over||active==null;
+    q.placeholder=g.over?'Grid finished':active==null?'Tap a square first':`${byId[g.rows[Math.floor(active/3)]].label} + ${byId[g.cols[active%3]].label}`;
+    $('xGive').hidden=g.over;
+    if(g.over) $('xtoast').textContent = filled===9?'Immaculate!':`${filled}/9. Gray names are possible answers.`;
+  }
+  search($('xq'),$('xsugg'),{exclude:()=>new Set(game().cells.filter(v=>v!=null)), onPick:p=>{
+    const g=game(); if(g.over||active==null) return;
+    const r=g.rows[Math.floor(active/3)], c=g.cols[active%3];
+    g.left--;
+    if(byId[r].test(p)&&byId[c].test(p)){ g.cells[active]=p.i; active=null; toast('Good pick'); }
+    else toast(`${p.n} doesn't fit ${byId[r].label} + ${byId[c].label}`);
+    if(g.left<=0||g.cells.every(v=>v!=null)) { g.over=true; active=null; }
+    save(); render();
+  }});
+  $('xGive').onclick=()=>{ const g=game(); g.over=true; active=null; save(); render(); };
+  $('xDaily').onclick=()=>{ mode='daily'; active=null; $('xtoast').textContent=''; render(); };
+  $('xNew').onclick=()=>{ mode='free'; store.xf=gen(Math.random); active=null; $('xtoast').textContent=''; save(); render(); };
+  return {render};
+})();
+
+/* ---------- Draft day ---------- */
+const D = (()=>{
+  const years=Object.keys(DATA.D).sort().reverse();
+  let year=years[0];
+  const st=()=>{ store.d=store.d||{}; if(!store.d[year]) store.d[year]={picks:Array(DATA.D[year].length).fill(''),scored:false}; return store.d[year]; };
+  function render(){
+    $('dYears').innerHTML=years.map(y=>`<button class="mode" type="button" data-y="${y}" aria-pressed="${y===year}">${y}</button>`).join('');
+    $('dYears').querySelectorAll('button').forEach(b=>b.onclick=()=>{ year=b.dataset.y; render(); });
+    const slots=DATA.D[year], s=st();
+    const pool=shuffled(slots.map((x,k)=>k),rng(hash('draft'+year)));
+    const box=$('dPicks'); box.innerHTML='';
+    slots.forEach((x,k)=>{
+      const [pick,team,name,pos,col]=x;
+      if(s.scored){
+        const g=s.picks[k]===''?-9:+s.picks[k], c=g===k?'hit':Math.abs(g-k)===1?'near':'';
+        box.insertAdjacentHTML('beforeend',`<div class="pick ${c}"><span class="no">#${pick}</span><span class="tm">${tn(team)}</span>
+          <span class="ans">${name} · ${pos}<small>${g===k?'+3 exact':c==='near'?`+1 · you had ${slots[g][2]}`:`you had ${g>=0?slots[g][2]:'nobody'}`}</small></span></div>`);
+        return;
+      }
+      const used=new Set(s.picks.filter((v,j)=>v!==''&&j!==k).map(Number));
+      const opts=pool.map(j=>`<option value="${j}" ${String(j)===String(s.picks[k])?'selected':''} ${used.has(j)?'disabled':''}>${slots[j][2]} · ${slots[j][3]}, ${slots[j][4]}</option>`).join('');
+      box.insertAdjacentHTML('beforeend',`<label class="pick"><span class="no">#${pick}</span><span class="tm">${tn(team)}</span>
+        <select id="dsel-${year}-${k}" data-k="${k}" aria-label="Pick ${pick}, ${tn(team)}"><option value="">Choose a player…</option>${opts}</select></label>`);
+    });
+    box.querySelectorAll('select').forEach(sel=>sel.onchange=()=>{ st().picks[+sel.dataset.k]=sel.value; save(); render(); });
+    $('dGo').hidden=s.scored; $('dGo').disabled=s.picks.some(v=>v==='');
+    const sc=$('dScore'); sc.hidden=!s.scored;
+    if(s.scored){
+      const pts=s.picks.reduce((t,v,k)=>t+(+v===k?3:Math.abs(+v-k)===1?1:0),0), max=slots.length*3, r=pts/max;
+      const grade=r>=.8?'A':r>=.6?'B':r>=.4?'C':r>=.2?'D':'F';
+      sc.innerHTML=`<h2>Grade: ${grade}</h2><p><b>${pts}</b> of ${max} points on the ${year} first round.</p>`;
+    }
+  }
+  $('dGo').onclick=()=>{ st().scored=true; save(); render(); };
+  $('dReset').onclick=()=>{ store.d[year]=null; save(); render(); };
+  return {render};
+})();
+
+/* ---------- Blurry box score ---------- */
+const B = (()=>{
+  const MAX=6, BLUR=[9,7,5.2,3.6,2.2,1];
+  let mode='daily';
+  const pool=STARS.filter(p=>p.st&&p.st[0]>=2);
+  const daily=()=>{ const s=pool.slice().sort((a,b)=>hash(a.n+'bb')-hash(b.n+'bb')); return s[Math.floor(Date.parse(today())/864e5)%s.length].i; };
+  function game(){
+    if(mode==='daily'){ if(!store.b||store.b.date!==today()) store.b={date:today(),answer:daily(),guesses:[],over:false,won:false}; return store.b; }
+    if(!store.bf) store.bf={answer:pickOne(pool).i,guesses:[],over:false,won:false}; return store.bf;
+  }
+  function line(p){
+    const s=p.st, rows=[['Games',s[0]]];
+    if(p.p==='QB') rows.push(['Passing',`${fmt(s[1])} yds · ${s[2]} TD · ${s[3]} INT`],['Rushing',`${s[4]} car · ${fmt(s[5])} yds · ${s[6]} TD`]);
+    else if(p.p==='RB') rows.push(['Rushing',`${s[4]} car · ${fmt(s[5])} yds · ${s[6]} TD`],['Receiving',`${s[7]} rec · ${fmt(s[8])} yds · ${s[9]} TD`]);
+    else rows.push(['Receiving',`${s[7]} rec · ${fmt(s[8])} yds · ${s[9]} TD`]);
+    rows.push(['PPR pts',s[10]]);
+    return rows;
+  }
+  function render(){
+    const g=game(), A=P[g.answer], miss=g.guesses.length;
+    $('bDaily').setAttribute('aria-pressed',mode==='daily'); $('bFree').setAttribute('aria-pressed',mode==='free');
+    const showTeam=g.over||miss>=3;
+    const draft=A.d?`${A.d[0]} · Rd ${A.d[1]}, pick ${A.d[2]} (${tn(A.d[3])})`:'Undrafted';
+    const rows=[...line(A),['College',A.c||'—'],['Drafted',draft],['Team',showTeam?`${tn(A.t)} · ${A.conf} ${TEAMS[A.t][1]}`:'<span class="hidden-t">After 3 misses</span>']];
+    $('bcard').innerHTML=`<div class="big"><span class="pos">${A.p}</span><span class="num">#${A.j}</span></div>`+rows.map(([k,v])=>`<dt>${k}</dt><dd>${v}</dd>`).join('');
+    $('bwrap').style.filter=g.over?'none':`blur(${BLUR[Math.min(miss,MAX-1)]}px)`;
+    $('bcount').textContent=`${miss}/${MAX}`; $('bq').disabled=g.over;
+    $('bmiss').innerHTML=g.guesses.filter(i=>i!==g.answer).map(i=>`<span>${P[i].n}</span>`).join('');
+    const ban=$('bbanner'); ban.hidden=!g.over;
+    if(g.over){
+      ban.innerHTML=`<h2>${g.won?'Got him':'Sacked'}</h2><p>${g.won?`Solved in ${miss}.`:'It was'} <b>${A.n}</b> · ${tn(A.t)} ${A.p}</p>
+        <div class="row"><button class="btn primary" id="bNext" type="button">${mode==='daily'?'Play unlimited':'Next player'}</button></div>`;
+      $('bNext').onclick=()=>{ if(mode==='daily'){ mode='free'; if(store.bf?.over) store.bf=null; } else store.bf=null; save(); render(); };
+    }
+  }
+  search($('bq'),$('bsugg'),{exclude:()=>new Set(game().guesses), onPick:p=>{
+    const g=game(); if(g.over) return;
+    g.guesses.push(p.i); if(p.i===g.answer){g.over=true;g.won=true;} else if(g.guesses.length>=MAX) g.over=true;
+    save(); render(); $('bq').focus();
+  }});
+  $('bDaily').onclick=()=>{mode='daily';render();}; $('bFree').onclick=()=>{mode='free';render();};
+  return {render};
+})();
+
+/* ---------- Tabs ---------- */
+const VIEWS={guess:G,higher:H,grid:X,draft:D,blur:B};
+function show(v){
+  if(!VIEWS[v]) v='guess';
+  document.querySelectorAll('.tab').forEach(t=>t.setAttribute('aria-selected',t.dataset.v===v));
+  Object.keys(VIEWS).forEach(k=>$('v-'+k).hidden=k!==v);
+  VIEWS[v].render();
+}
+document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{ if(location.hash!=='#'+t.dataset.v) location.hash=t.dataset.v; else show(t.dataset.v); });
+addEventListener('hashchange',()=>show(location.hash.slice(1)));
+function start(d){ if(d&&d.store) store=d.store; show(location.hash.slice(1)); }
+window.claude?.hot?.snapshot?.(()=>({store}));
+window.claude?.hot?.ready ? window.claude.hot.ready(start) : start(window.claude?.hot?.data ?? {});
+</script>
